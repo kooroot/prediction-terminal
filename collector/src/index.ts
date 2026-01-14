@@ -182,4 +182,4 @@ process.on('SIGTERM', () => {
   process.exit(0)
 })
 
-export default server
+// Note: Don't export default server - it causes stack overflow in Bun
