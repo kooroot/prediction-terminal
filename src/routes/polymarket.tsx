@@ -1,15 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
-import { fetchPolymarketBinaryMarkets, fetchPolymarketDutchingEvents } from '~/lib/api/polymarket'
+import { fetchBinaryMarketsFromCache, fetchDutchingEventsFromCache } from '~/lib/cache/client'
 import type { MarketData, DutchingEvent } from '~/lib/types'
 
+// Cache server URL - set via environment variable
+const CACHE_SERVER_URL = process.env.CACHE_SERVER_URL || 'http://localhost:3001'
+
 const getBinaryMarkets = createServerFn({ method: 'GET' }).handler(async () => {
-  return await fetchPolymarketBinaryMarkets()
+  return await fetchBinaryMarketsFromCache('polymarket', CACHE_SERVER_URL)
 })
 
 const getDutchingEvents = createServerFn({ method: 'GET' }).handler(async () => {
-  return await fetchPolymarketDutchingEvents()
+  return await fetchDutchingEventsFromCache('polymarket', CACHE_SERVER_URL)
 })
 
 export const Route = createFileRoute('/polymarket')({
