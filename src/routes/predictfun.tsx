@@ -4,6 +4,14 @@ import { useState } from 'react'
 import { fetchBinaryMarketsFromCache, fetchDutchingEventsFromCache } from '~/lib/cache/client'
 import type { MarketData, DutchingEvent } from '~/lib/types'
 
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 // Cache server URL - set via environment variable
 const CACHE_SERVER_URL = process.env.CACHE_SERVER_URL || 'http://localhost:3001'
 
@@ -230,7 +238,7 @@ function BinaryMarketsTable({ markets, opportunities }: { markets: MarketData[];
                   <td className="px-3 py-2 text-zinc-600 hide-mobile">{String(i + 1).padStart(2, '0')}</td>
                   <td className="max-w-[300px] truncate px-3 py-2 market-title">
                     <a
-                      href={`https://predict.fun/market/${market.slug || market.id}`}
+                      href={`https://predict.fun/market/${generateSlug(market.title)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-zinc-300 hover:text-green-400 hover:underline"
@@ -326,7 +334,7 @@ function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEven
                   <td className="px-3 py-2 text-zinc-600 hide-mobile">{String(i + 1).padStart(2, '0')}</td>
                   <td className="max-w-[240px] truncate px-3 py-2 market-title">
                     <a
-                      href={`https://predict.fun/market/${event.slug || event.id}`}
+                      href={`https://predict.fun/market/${generateSlug(event.title)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-zinc-300 hover:text-green-400 hover:underline"
