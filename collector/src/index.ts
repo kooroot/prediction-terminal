@@ -5,10 +5,10 @@ import type { Platform, DataType } from './types'
 const PORT = Number(process.env.PORT) || 3001
 
 // Per-platform refresh intervals (in milliseconds)
-// Intervals must be longer than initial refresh time (~20s) to avoid stack overflow
-const POLYMARKET_INTERVAL = Number(process.env.POLYMARKET_INTERVAL) || 30000  // 30 seconds
-const PREDICTFUN_INTERVAL = Number(process.env.PREDICTFUN_INTERVAL) || 60000  // 60 seconds (rate limit)
-const KALSHI_INTERVAL = Number(process.env.KALSHI_INTERVAL) || 30000          // 30 seconds
+// runningFlags prevent overlapping refreshes, so intervals can be shorter
+const POLYMARKET_INTERVAL = Number(process.env.POLYMARKET_INTERVAL) || 15000  // 15 seconds (no rate limit)
+const PREDICTFUN_INTERVAL = Number(process.env.PREDICTFUN_INTERVAL) || 60000  // 60 seconds (strict rate limit)
+const KALSHI_INTERVAL = Number(process.env.KALSHI_INTERVAL) || 20000          // 20 seconds (authenticated)
 
 const PREDICT_FUN_API_KEY = process.env.PREDICT_FUN_API_KEY
 const KALSHI_KEY_ID = process.env.KALSHI_KEY_ID
