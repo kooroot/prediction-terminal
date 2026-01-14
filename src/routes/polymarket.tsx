@@ -8,11 +8,19 @@ import type { MarketData, DutchingEvent } from '~/lib/types'
 const CACHE_SERVER_URL = process.env.CACHE_SERVER_URL || 'http://localhost:3001'
 
 const getBinaryMarkets = createServerFn({ method: 'GET' }).handler(async () => {
-  return await fetchBinaryMarketsFromCache('polymarket', CACHE_SERVER_URL)
+  try {
+    return await fetchBinaryMarketsFromCache('polymarket', CACHE_SERVER_URL)
+  } catch {
+    return null
+  }
 })
 
 const getDutchingEvents = createServerFn({ method: 'GET' }).handler(async () => {
-  return await fetchDutchingEventsFromCache('polymarket', CACHE_SERVER_URL)
+  try {
+    return await fetchDutchingEventsFromCache('polymarket', CACHE_SERVER_URL)
+  } catch {
+    return null
+  }
 })
 
 export const Route = createFileRoute('/polymarket')({
@@ -34,7 +42,7 @@ function LoadingPage() {
           <span className="text-zinc-100">fetch --source polymarket</span>
           <span className="cursor" />
         </div>
-        <p className="text-xs text-zinc-600">// polygon chain • decentralized CLOB</p>
+        <p className="text-sm text-zinc-600">// polygon chain • decentralized CLOB</p>
       </div>
 
       {/* Loading State */}
@@ -46,8 +54,8 @@ function LoadingPage() {
             <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>▓</span>
           </div>
           <div className="space-y-1">
-            <p className="text-sm text-zinc-400">fetching orderbooks...</p>
-            <p className="text-xs text-zinc-600">connecting to polymarket API</p>
+            <p className="text-base text-zinc-400">fetching orderbooks...</p>
+            <p className="text-sm text-zinc-600">connecting to polymarket API</p>
           </div>
         </div>
       </div>
@@ -59,6 +67,43 @@ function PolymarketPage() {
   const { binary, dutching } = Route.useLoaderData()
   const [activeTab, setActiveTab] = useState<'binary' | 'dutching'>('binary')
 
+  // Check if data is available
+  if (!binary || !dutching) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-green-500">$</span>
+            <span className="text-zinc-100">fetch --source polymarket</span>
+          </div>
+          <p className="text-sm text-zinc-600">// polygon chain • decentralized CLOB</p>
+        </div>
+
+        <div className="border border-zinc-800 bg-zinc-900/30">
+          <div className="border-b border-zinc-800 px-4 py-2">
+            <span className="text-sm text-zinc-500">status</span>
+          </div>
+          <div className="p-4 space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="text-yellow-500">!</span>
+              <div className="space-y-2">
+                <p className="text-sm text-yellow-500">data not available</p>
+                <p className="text-sm text-zinc-600">
+                  polymarket data is not yet cached. ensure the collector server is running and accessible.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-sm text-zinc-600 flex items-center gap-2">
+          <span>status:</span>
+          <span className="text-yellow-500">pending_data</span>
+        </div>
+      </div>
+    )
+  }
+
   const binaryOpps = binary.filter((m) => m.margin > 0.005)
   const dutchingYesOpps = dutching.filter((e) => e.yesMargin > 0.01)
   const dutchingNoOpps = dutching.filter((e) => e.noMargin > 0.01)
@@ -66,13 +111,13 @@ function PolymarketPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-green-500">$</span>
-            <span className="text-zinc-100">scan --market polymarket --mode {activeTab}</span>
+            <span className="text-zinc-100 text-sm sm:text-base">scan --market polymarket --mode {activeTab}</span>
           </div>
-          <p className="text-xs text-zinc-600">// polygon chain • decentralized CLOB</p>
+          <p className="text-sm text-zinc-600 hidden sm:block">// polygon chain • decentralized CLOB</p>
         </div>
 
         {/* Tab Buttons */}
@@ -93,7 +138,7 @@ function PolymarketPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="flex items-center gap-6 text-xs">
+      <div className="flex items-center gap-6 text-sm">
         <span className="text-zinc-600">
           markets: <span className="text-zinc-400">{activeTab === 'binary' ? binary.length : dutching.length}</span>
         </span>
@@ -131,7 +176,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2 text-xs transition-colors ${
+      className={`px-4 py-2 text-sm transition-colors ${
         active
           ? 'bg-zinc-800 text-green-500'
           : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-400'
@@ -152,22 +197,22 @@ function BinaryMarketsTable({ markets, opportunities }: { markets: MarketData[];
             <span className="text-green-500">▲</span>
             <span className="text-green-500">{opportunities} arbitrage opportunities detected</span>
           </div>
-          <p className="mt-1 text-xs text-zinc-600">condition: ask(YES) + ask(NO) &lt; 1.00</p>
+          <p className="mt-1 text-sm text-zinc-600">condition: ask(YES) + ask(NO) &lt; 1.00</p>
         </div>
       )}
 
       {/* Table */}
       <div className="border border-zinc-800 overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-900/50">
-              <th className="px-3 py-2 text-left font-medium text-zinc-500">#</th>
+              <th className="px-3 py-2 text-left font-medium text-zinc-500 hide-mobile">#</th>
               <th className="px-3 py-2 text-left font-medium text-zinc-500">MARKET</th>
-              <th className="px-3 py-2 text-right font-medium text-zinc-500">ASK_YES</th>
-              <th className="px-3 py-2 text-right font-medium text-zinc-500">ASK_NO</th>
+              <th className="px-3 py-2 text-right font-medium text-zinc-500 hide-mobile">ASK_YES</th>
+              <th className="px-3 py-2 text-right font-medium text-zinc-500 hide-mobile">ASK_NO</th>
               <th className="px-3 py-2 text-right font-medium text-zinc-500">SUM</th>
               <th className="px-3 py-2 text-right font-medium text-zinc-500">MARGIN</th>
-              <th className="px-3 py-2 text-right font-medium text-zinc-500">LIQ</th>
+              <th className="px-3 py-2 text-right font-medium text-zinc-500 hide-mobile">LIQ</th>
             </tr>
           </thead>
           <tbody>
@@ -178,17 +223,17 @@ function BinaryMarketsTable({ markets, opportunities }: { markets: MarketData[];
                   key={market.id}
                   className={`border-b border-zinc-800/50 ${hasOpp ? 'bg-green-500/5' : 'hover:bg-zinc-900/30'}`}
                 >
-                  <td className="px-3 py-2 text-zinc-600">{String(i + 1).padStart(2, '0')}</td>
-                  <td className="max-w-[300px] truncate px-3 py-2 text-zinc-300">{market.title}</td>
-                  <td className="px-3 py-2 text-right text-zinc-400">{(market.askYes * 100).toFixed(1)}%</td>
-                  <td className="px-3 py-2 text-right text-zinc-400">{(market.askNo * 100).toFixed(1)}%</td>
+                  <td className="px-3 py-2 text-zinc-600 hide-mobile">{String(i + 1).padStart(2, '0')}</td>
+                  <td className="max-w-[300px] truncate px-3 py-2 text-zinc-300 market-title">{market.title}</td>
+                  <td className="px-3 py-2 text-right text-zinc-400 hide-mobile">{(market.askYes * 100).toFixed(1)}%</td>
+                  <td className="px-3 py-2 text-right text-zinc-400 hide-mobile">{(market.askNo * 100).toFixed(1)}%</td>
                   <td className={`px-3 py-2 text-right ${market.sumAsks < 0.98 ? 'text-green-500' : 'text-zinc-400'}`}>
                     {(market.sumAsks * 100).toFixed(1)}%
                   </td>
                   <td className={`px-3 py-2 text-right font-medium ${getMarginColor(market.margin)}`}>
                     {market.margin > 0 ? '+' : ''}{(market.margin * 100).toFixed(2)}%
                   </td>
-                  <td className="px-3 py-2 text-right text-zinc-600">{formatCurrency(market.liquidity)}</td>
+                  <td className="px-3 py-2 text-right text-zinc-600 hide-mobile">{formatCurrency(market.liquidity)}</td>
                 </tr>
               )
             })}
@@ -197,7 +242,7 @@ function BinaryMarketsTable({ markets, opportunities }: { markets: MarketData[];
       </div>
 
       {/* Footer */}
-      <div className="text-xs text-zinc-600">
+      <div className="text-sm text-zinc-600">
         showing {Math.min(50, markets.length)} of {markets.length} markets
       </div>
     </div>
@@ -216,7 +261,7 @@ function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEven
                 <span className="text-green-500">▲</span>
                 <span className="text-green-500">{yesOpps} BUY_ALL_YES opportunities</span>
               </div>
-              <p className="mt-1 text-xs text-zinc-600">condition: Σ(YES asks) &lt; 1.00</p>
+              <p className="mt-1 text-sm text-zinc-600">condition: Σ(YES asks) &lt; 1.00</p>
             </div>
           )}
           {noOpps > 0 && (
@@ -225,7 +270,7 @@ function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEven
                 <span className="text-purple-500">▲</span>
                 <span className="text-purple-500">{noOpps} BUY_ALL_NO opportunities</span>
               </div>
-              <p className="mt-1 text-xs text-zinc-600">condition: Σ(NO asks) &lt; (N-1)</p>
+              <p className="mt-1 text-sm text-zinc-600">condition: Σ(NO asks) &lt; (N-1)</p>
             </div>
           )}
         </div>
@@ -233,19 +278,19 @@ function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEven
 
       {/* Table */}
       <div className="border border-zinc-800 overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-900/50">
-              <th className="px-3 py-2 text-left font-medium text-zinc-500">#</th>
+              <th className="px-3 py-2 text-left font-medium text-zinc-500 hide-mobile">#</th>
               <th className="px-3 py-2 text-left font-medium text-zinc-500">EVENT</th>
               <th className="px-3 py-2 text-right font-medium text-zinc-500">N</th>
-              <th className="px-3 py-2 text-right font-medium text-zinc-500">Σ_YES</th>
+              <th className="px-3 py-2 text-right font-medium text-zinc-500 hide-mobile">Σ_YES</th>
               <th className="px-3 py-2 text-right font-medium text-zinc-500">Y_MGN</th>
-              <th className="px-3 py-2 text-right font-medium text-zinc-500">Σ_NO</th>
-              <th className="px-3 py-2 text-right font-medium text-zinc-500">N-1</th>
+              <th className="px-3 py-2 text-right font-medium text-zinc-500 hide-mobile">Σ_NO</th>
+              <th className="px-3 py-2 text-right font-medium text-zinc-500 hide-mobile">N-1</th>
               <th className="px-3 py-2 text-right font-medium text-zinc-500">N_MGN</th>
-              <th className="px-3 py-2 text-right font-medium text-zinc-500">DAYS</th>
-              <th className="px-3 py-2 text-right font-medium text-zinc-500">LIQ</th>
+              <th className="px-3 py-2 text-right font-medium text-zinc-500 hide-mobile">DAYS</th>
+              <th className="px-3 py-2 text-right font-medium text-zinc-500 hide-mobile">LIQ</th>
             </tr>
           </thead>
           <tbody>
@@ -260,24 +305,24 @@ function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEven
                   key={event.id}
                   className={`border-b border-zinc-800/50 ${hasOpp ? 'bg-green-500/5' : 'hover:bg-zinc-900/30'}`}
                 >
-                  <td className="px-3 py-2 text-zinc-600">{String(i + 1).padStart(2, '0')}</td>
-                  <td className="max-w-[240px] truncate px-3 py-2 text-zinc-300">{event.title}</td>
+                  <td className="px-3 py-2 text-zinc-600 hide-mobile">{String(i + 1).padStart(2, '0')}</td>
+                  <td className="max-w-[240px] truncate px-3 py-2 text-zinc-300 market-title">{event.title}</td>
                   <td className="px-3 py-2 text-right text-zinc-400">{event.outcomeCount}</td>
-                  <td className={`px-3 py-2 text-right ${event.sumYesAsks < 0.97 ? 'text-green-500' : 'text-zinc-400'}`}>
+                  <td className={`px-3 py-2 text-right hide-mobile ${event.sumYesAsks < 0.97 ? 'text-green-500' : 'text-zinc-400'}`}>
                     {(event.sumYesAsks * 100).toFixed(1)}%
                   </td>
                   <td className={`px-3 py-2 text-right font-medium ${getMarginColor(event.yesMargin)}`}>
                     {event.yesMargin > 0 ? '+' : ''}{(event.yesMargin * 100).toFixed(1)}%
                   </td>
-                  <td className={`px-3 py-2 text-right ${event.sumNoAsks < nMinus1 * 0.97 ? 'text-purple-500' : 'text-zinc-400'}`}>
+                  <td className={`px-3 py-2 text-right hide-mobile ${event.sumNoAsks < nMinus1 * 0.97 ? 'text-purple-500' : 'text-zinc-400'}`}>
                     {(event.sumNoAsks * 100).toFixed(1)}%
                   </td>
-                  <td className="px-3 py-2 text-right text-zinc-600">{nMinus1 * 100}%</td>
+                  <td className="px-3 py-2 text-right text-zinc-600 hide-mobile">{nMinus1 * 100}%</td>
                   <td className={`px-3 py-2 text-right font-medium ${getMarginColorPurple(event.noMargin)}`}>
                     {event.noMargin > 0 ? '+' : ''}{(event.noMargin * 100).toFixed(1)}%
                   </td>
-                  <td className="px-3 py-2 text-right text-zinc-600">{event.daysToExpiry?.toFixed(0) ?? '--'}</td>
-                  <td className="px-3 py-2 text-right text-zinc-600">{formatCurrency(event.totalLiquidity)}</td>
+                  <td className="px-3 py-2 text-right text-zinc-600 hide-mobile">{event.daysToExpiry?.toFixed(0) ?? '--'}</td>
+                  <td className="px-3 py-2 text-right text-zinc-600 hide-mobile">{formatCurrency(event.totalLiquidity)}</td>
                 </tr>
               )
             })}
@@ -286,7 +331,7 @@ function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEven
       </div>
 
       {/* Footer */}
-      <div className="text-xs text-zinc-600">
+      <div className="text-sm text-zinc-600">
         showing {Math.min(30, events.length)} of {events.length} events
       </div>
     </div>

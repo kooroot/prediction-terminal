@@ -25,7 +25,7 @@ html {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
   background-color: var(--terminal-bg);
   color: var(--terminal-text);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -64,8 +64,8 @@ html {
 
 .cursor {
   display: inline-block;
-  width: 8px;
-  height: 16px;
+  width: 10px;
+  height: 20px;
   background-color: var(--terminal-green);
   animation: blink 1s infinite;
   vertical-align: middle;
@@ -85,7 +85,7 @@ html {
   color: var(--terminal-text-muted);
   font-weight: 500;
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.05em;
 }
 
@@ -103,7 +103,7 @@ html {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -122,4 +122,35 @@ html {
 .badge-error {
   color: var(--terminal-red);
   background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 639px) {
+  /* Smaller base font on mobile */
+  html {
+    font-size: 14px;
+  }
+
+  /* Hide on mobile */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Compact table cells on mobile */
+  table td,
+  table th {
+    padding: 6px 8px !important;
+  }
+
+  /* Truncate market titles more aggressively */
+  .market-title {
+    max-width: 120px !important;
+  }
+}
+
+/* Show only on mobile */
+@media (min-width: 640px) {
+  .show-mobile-only {
+    display: none !important;
+  }
 }
