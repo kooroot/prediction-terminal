@@ -65,7 +65,10 @@ export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<Mark
   const headers = { 'x-api-key': apiKey }
 
   const response = await fetch(`${BASE_URL}/markets?status=OPEN&first=100`, { headers })
-  if (!response.ok) throw new Error('Failed to fetch Predict.fun markets')
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Predict.fun API error: ${response.status} ${response.statusText} - ${text}`)
+  }
 
   const data = (await response.json()) as { data: PredictMarket[] }
   const markets = data.data ?? []

@@ -4,17 +4,35 @@ import { fetchPredictfunBinaryMarkets, fetchPredictfunDutchingEvents } from './c
 import { fetchKalshiBinaryMarkets, fetchKalshiDutchingEvents } from './collectors/kalshi'
 import type { KalshiCredentials } from './auth/kalshi'
 
+export interface PlatformIntervals {
+  polymarket: number // in milliseconds
+  predictfun: number // in milliseconds (should be longer due to rate limits)
+  kalshi: number // in milliseconds
+}
+
 export interface SchedulerConfig {
-  refreshInterval: number // in milliseconds
+  refreshInterval?: number // deprecated: use platformIntervals instead
+  platformIntervals?: Partial<PlatformIntervals>
   predictfunApiKey?: string
   kalshiCredentials?: KalshiCredentials
+}
+
+const DEFAULT_INTERVALS: PlatformIntervals = {
+  polymarket: 5000, // 5 seconds
+  predictfun: 60000, // 60 seconds (Predict.fun has strict rate limits)
+  kalshi: 10000, // 10 seconds
 }
 
 export class DataScheduler {
   private cache: CacheStore
   private config: SchedulerConfig
-  private intervalId: ReturnType<typeof setInterval> | null = null
-  private isRunning = false
+  private intervals: PlatformIntervals
+  private intervalIds: {
+    polymarket: ReturnType<typeof setInterval> | null
+    predictfun: ReturnType<typeof setInterval> | null
+    kalshi: ReturnType<typeof setInterval> | null
+  } = { polymarket: null, predictfun: null, kalshi: null }
+  private runningFlags = { polymarket: false, predictfun: false, kalshi: false }
 
   constructor(config: SchedulerConfig) {
     this.config = config
@@ -23,6 +41,11 @@ export class DataScheduler {
       predictfun: { binary: null, dutching: null },
       kalshi: { binary: null, dutching: null },
     }
+    // Merge custom intervals with defaults
+    this.intervals = {
+      ...DEFAULT_INTERVALS,
+      ...config.platformIntervals,
+    }
   }
 
   getCache(): CacheStore {
@@ -30,6 +53,12 @@ export class DataScheduler {
   }
 
   async refreshPolymarket(): Promise<void> {
+    if (this.runningFlags.polymarket) {
+      console.log('[Scheduler] Polymarket refresh in progress, skipping...')
+      return
+    }
+    this.runningFlags.polymarket = true
+
     console.log('[Scheduler] Refreshing Polymarket data...')
     try {
       const [binary, dutching] = await Promise.all([
@@ -52,6 +81,8 @@ export class DataScheduler {
       console.log(`[Scheduler] Polymarket: ${binary.length} binary, ${dutching.length} dutching`)
     } catch (error) {
       console.error('[Scheduler] Failed to refresh Polymarket:', error)
+    } finally {
+      this.runningFlags.polymarket = false
     }
   }
 
@@ -60,6 +91,12 @@ export class DataScheduler {
       console.log('[Scheduler] Skipping Predict.fun (no API key)')
       return
     }
+
+    if (this.runningFlags.predictfun) {
+      console.log('[Scheduler] Predict.fun refresh in progress, skipping...')
+      return
+    }
+    this.runningFlags.predictfun = true
 
     console.log('[Scheduler] Refreshing Predict.fun data...')
     try {
@@ -83,6 +120,8 @@ export class DataScheduler {
       console.log(`[Scheduler] Predict.fun: ${binary.length} binary, ${dutching.length} dutching`)
     } catch (error) {
       console.error('[Scheduler] Failed to refresh Predict.fun:', error)
+    } finally {
+      this.runningFlags.predictfun = false
     }
   }
 
@@ -91,6 +130,12 @@ export class DataScheduler {
       console.log('[Scheduler] Skipping Kalshi (no credentials)')
       return
     }
+
+    if (this.runningFlags.kalshi) {
+      console.log('[Scheduler] Kalshi refresh in progress, skipping...')
+      return
+    }
+    this.runningFlags.kalshi = true
 
     console.log('[Scheduler] Refreshing Kalshi data...')
     try {
@@ -114,56 +159,70 @@ export class DataScheduler {
       console.log(`[Scheduler] Kalshi: ${binary.length} binary, ${dutching.length} dutching`)
     } catch (error) {
       console.error('[Scheduler] Failed to refresh Kalshi:', error)
+    } finally {
+      this.runningFlags.kalshi = false
     }
   }
 
   async refreshAll(): Promise<void> {
-    if (this.isRunning) {
-      console.log('[Scheduler] Refresh already in progress, skipping...')
-      return
-    }
-
-    this.isRunning = true
     const startTime = Date.now()
     console.log('[Scheduler] Starting full refresh...')
 
-    try {
-      // Run all refreshes in parallel
-      await Promise.all([
-        this.refreshPolymarket(),
-        this.refreshPredictfun(),
-        this.refreshKalshi(),
-      ])
+    // Run all refreshes in parallel
+    await Promise.all([
+      this.refreshPolymarket(),
+      this.refreshPredictfun(),
+      this.refreshKalshi(),
+    ])
 
-      const duration = Date.now() - startTime
-      console.log(`[Scheduler] Full refresh completed in ${duration}ms`)
-    } finally {
-      this.isRunning = false
-    }
+    const duration = Date.now() - startTime
+    console.log(`[Scheduler] Full refresh completed in ${duration}ms`)
   }
 
   start(): void {
-    if (this.intervalId) {
+    const alreadyRunning = Object.values(this.intervalIds).some((id) => id !== null)
+    if (alreadyRunning) {
       console.log('[Scheduler] Already running')
       return
     }
 
-    console.log(`[Scheduler] Starting with interval: ${this.config.refreshInterval}ms`)
+    console.log('[Scheduler] Starting with per-platform intervals:')
+    console.log(`  - Polymarket: ${this.intervals.polymarket}ms`)
+    console.log(`  - Predict.fun: ${this.intervals.predictfun}ms`)
+    console.log(`  - Kalshi: ${this.intervals.kalshi}ms`)
 
-    // Initial refresh
+    // Initial refresh for all platforms
     this.refreshAll()
 
-    // Schedule periodic refresh
-    this.intervalId = setInterval(() => {
-      this.refreshAll()
-    }, this.config.refreshInterval)
+    // Schedule per-platform periodic refresh
+    this.intervalIds.polymarket = setInterval(() => {
+      this.refreshPolymarket()
+    }, this.intervals.polymarket)
+
+    this.intervalIds.predictfun = setInterval(() => {
+      this.refreshPredictfun()
+    }, this.intervals.predictfun)
+
+    this.intervalIds.kalshi = setInterval(() => {
+      this.refreshKalshi()
+    }, this.intervals.kalshi)
   }
 
   stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId)
-      this.intervalId = null
-      console.log('[Scheduler] Stopped')
+    let stopped = false
+    for (const [platform, intervalId] of Object.entries(this.intervalIds)) {
+      if (intervalId) {
+        clearInterval(intervalId)
+        this.intervalIds[platform as keyof typeof this.intervalIds] = null
+        stopped = true
+      }
     }
+    if (stopped) {
+      console.log('[Scheduler] Stopped all platform schedulers')
+    }
+  }
+
+  getIntervals(): PlatformIntervals {
+    return this.intervals
   }
 }
