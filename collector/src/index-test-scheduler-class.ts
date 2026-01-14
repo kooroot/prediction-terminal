@@ -1,44 +1,125 @@
 /**
- * Test server using the ACTUAL DataScheduler class but with mocked collectors
- * This tests if the DataScheduler class itself causes the stack overflow
+ * Test server using a COPY of DataScheduler class logic with mock data
+ * This tests if the scheduler pattern itself causes the stack overflow
  */
 
-// Mock the collector modules BEFORE importing scheduler
-const mockBinary = [{ id: '1', title: 'Test', askYes: 0.5, askNo: 0.5, bidYes: 0.49, bidNo: 0.49, sumAsks: 1, margin: 0, liquidity: 1000 }]
-const mockDutching = [{ id: '1', title: 'Test Event', outcomeCount: 3, outcomes: [], sumYesAsks: 0.9, sumNoAsks: 1.8, yesMargin: 0.1, noMargin: 0.2, totalLiquidity: 5000, minYesDepth: 100, minNoDepth: 100 }]
-
-// Override the collector functions
-import * as polymarket from './collectors/polymarket'
-import * as predictfun from './collectors/predictfun'
-import * as kalshi from './collectors/kalshi'
-
-// @ts-ignore - mocking
-polymarket.fetchPolymarketBinaryMarkets = async () => mockBinary
-// @ts-ignore - mocking
-polymarket.fetchPolymarketDutchingEvents = async () => mockDutching
-// @ts-ignore - mocking
-predictfun.fetchPredictfunBinaryMarkets = async () => mockBinary
-// @ts-ignore - mocking
-predictfun.fetchPredictfunDutchingEvents = async () => mockDutching
-// @ts-ignore - mocking
-kalshi.fetchKalshiBinaryMarkets = async () => mockBinary
-// @ts-ignore - mocking
-kalshi.fetchKalshiDutchingEvents = async () => mockDutching
-
-import { DataScheduler } from './scheduler'
+import type { CacheStore, MarketData, DutchingEvent } from './types'
 
 const PORT = 3001
 
-// Create the REAL DataScheduler with mocked collectors
-const scheduler = new DataScheduler({
-  platformIntervals: {
-    polymarket: 60000, // slow down for testing
-    predictfun: 60000,
-    kalshi: 60000,
-  },
-  predictfunApiKey: 'mock-key',
-  kalshiCredentials: { keyId: 'mock', privateKey: 'mock' },
-})
+// Mock data
+const mockBinary: MarketData[] = [
+  { id: '1', title: 'Test Market', askYes: 0.5, askNo: 0.5, bidYes: 0.49, bidNo: 0.49, sumAsks: 1, margin: 0, liquidity: 1000 }
+]
+const mockDutching: DutchingEvent[] = [
+  { id: '1', title: 'Test Event', outcomeCount: 3, outcomes: [], sumYesAsks: 0.9, sumNoAsks: 1.8, yesMargin: 0.1, noMargin: 0.2, totalLiquidity: 5000, minYesDepth: 100, minNoDepth: 100 }
+]
+
+// Copy of DataScheduler class with mock data
+class MockDataScheduler {
+  private cache: CacheStore
+  private intervalIds: {
+    polymarket: ReturnType<typeof setInterval> | null
+    predictfun: ReturnType<typeof setInterval> | null
+    kalshi: ReturnType<typeof setInterval> | null
+  } = { polymarket: null, predictfun: null, kalshi: null }
+
+  constructor() {
+    this.cache = {
+      polymarket: { binary: null, dutching: null },
+      predictfun: { binary: null, dutching: null },
+      kalshi: { binary: null, dutching: null },
+    }
+  }
+
+  getCache(): CacheStore {
+    return this.cache
+  }
+
+  async refreshPolymarket(): Promise<void> {
+    console.log('[MockScheduler] Refreshing Polymarket...')
+    this.cache.polymarket.binary = {
+      data: mockBinary,
+      updatedAt: Date.now(),
+      platform: 'polymarket',
+      type: 'binary',
+    }
+    this.cache.polymarket.dutching = {
+      data: mockDutching,
+      updatedAt: Date.now(),
+      platform: 'polymarket',
+      type: 'dutching',
+    }
+  }
+
+  async refreshPredictfun(): Promise<void> {
+    console.log('[MockScheduler] Refreshing Predict.fun...')
+    this.cache.predictfun.binary = {
+      data: mockBinary,
+      updatedAt: Date.now(),
+      platform: 'predictfun',
+      type: 'binary',
+    }
+    this.cache.predictfun.dutching = {
+      data: mockDutching,
+      updatedAt: Date.now(),
+      platform: 'predictfun',
+      type: 'dutching',
+    }
+  }
+
+  async refreshKalshi(): Promise<void> {
+    console.log('[MockScheduler] Refreshing Kalshi...')
+    this.cache.kalshi.binary = {
+      data: mockBinary,
+      updatedAt: Date.now(),
+      platform: 'kalshi',
+      type: 'binary',
+    }
+    this.cache.kalshi.dutching = {
+      data: mockDutching,
+      updatedAt: Date.now(),
+      platform: 'kalshi',
+      type: 'dutching',
+    }
+  }
+
+  async refreshAll(): Promise<void> {
+    await Promise.all([
+      this.refreshPolymarket(),
+      this.refreshPredictfun(),
+      this.refreshKalshi(),
+    ])
+  }
+
+  start(): void {
+    console.log('[MockScheduler] Starting...')
+    this.refreshAll()
+
+    this.intervalIds.polymarket = setInterval(() => {
+      this.refreshPolymarket()
+    }, 60000)
+
+    this.intervalIds.predictfun = setInterval(() => {
+      this.refreshPredictfun()
+    }, 60000)
+
+    this.intervalIds.kalshi = setInterval(() => {
+      this.refreshKalshi()
+    }, 60000)
+  }
+
+  stop(): void {
+    for (const [platform, intervalId] of Object.entries(this.intervalIds)) {
+      if (intervalId) {
+        clearInterval(intervalId)
+        this.intervalIds[platform as keyof typeof this.intervalIds] = null
+      }
+    }
+  }
+}
+
+const scheduler = new MockDataScheduler()
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,9 +129,7 @@ const corsHeaders = {
 
 function jsonResponse(data: unknown, status = 200): Response {
   try {
-    console.log('[Test] Attempting JSON.stringify...')
     const body = JSON.stringify(data)
-    console.log('[Test] JSON.stringify succeeded, length:', body.length)
     return new Response(body, {
       status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -64,23 +143,7 @@ function jsonResponse(data: unknown, status = 200): Response {
   }
 }
 
-// Start scheduler
-console.log('[Test] Starting scheduler...')
 scheduler.start()
-console.log('[Test] Scheduler started')
-
-// Wait a bit for initial refresh to complete
-setTimeout(() => {
-  console.log('[Test] Checking cache after startup...')
-  try {
-    const cache = scheduler.getCache()
-    console.log('[Test] Got cache, trying to stringify...')
-    const str = JSON.stringify(cache)
-    console.log('[Test] Cache stringified OK, length:', str.length)
-  } catch (error) {
-    console.error('[Test] Cache stringify FAILED:', error)
-  }
-}, 2000)
 
 const server = Bun.serve({
   port: PORT,
@@ -94,22 +157,37 @@ const server = Bun.serve({
 
     if (path === '/') {
       return jsonResponse({
-        name: 'Test Server - DataScheduler Class with Mocks',
+        name: 'Test Server - MockDataScheduler Class',
         status: 'running',
       })
     }
 
     if (path === '/cache') {
-      console.log('[Test] /cache endpoint hit')
       const cache = scheduler.getCache()
       return jsonResponse(cache)
+    }
+
+    if (path === '/status') {
+      const cache = scheduler.getCache()
+      return jsonResponse({
+        polymarket: {
+          binary: cache.polymarket.binary?.data?.length ?? null,
+          dutching: cache.polymarket.dutching?.data?.length ?? null,
+        },
+        predictfun: {
+          binary: cache.predictfun.binary?.data?.length ?? null,
+          dutching: cache.predictfun.dutching?.data?.length ?? null,
+        },
+        kalshi: {
+          binary: cache.kalshi.binary?.data?.length ?? null,
+          dutching: cache.kalshi.dutching?.data?.length ?? null,
+        },
+      })
     }
 
     return jsonResponse({ error: 'Not found' }, 404)
   },
 })
 
-console.log(`[Test] Server running on port ${PORT}`)
-console.log('[Test] Test endpoints:')
-console.log('  curl http://localhost:3001/')
-console.log('  curl http://localhost:3001/cache')
+console.log(`[Test] MockDataScheduler server on port ${PORT}`)
+console.log('[Test] Endpoints: /, /cache, /status')
