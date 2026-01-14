@@ -1,0 +1,5 @@
+# Cloudflare Workers Development Environment Variables
+# Copy this file to .dev.vars and fill in the values
+
+# VPS Cache Server URL
+CACHE_SERVER_URL=http://localhost:3001
