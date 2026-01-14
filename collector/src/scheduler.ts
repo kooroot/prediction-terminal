@@ -18,9 +18,9 @@ export interface SchedulerConfig {
 }
 
 const DEFAULT_INTERVALS: PlatformIntervals = {
-  polymarket: 30000, // 30 seconds (must be longer than initial refresh ~20s)
+  polymarket: 15000, // 15 seconds (no rate limit, fast updates)
   predictfun: 60000, // 60 seconds (Predict.fun has strict rate limits)
-  kalshi: 30000, // 30 seconds (must be longer than initial refresh ~20s)
+  kalshi: 20000, // 20 seconds (authenticated API)
 }
 
 export class DataScheduler {
