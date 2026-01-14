@@ -6,6 +6,7 @@ const CLOB_HOST = 'https://clob.polymarket.com'
 interface GammaMarket {
   condition_id: string
   question: string
+  slug: string
   tokens: { token_id: string; outcome: string }[]
   active: boolean
   closed: boolean
@@ -88,6 +89,7 @@ export async function fetchPolymarketBinaryMarkets(): Promise<MarketData[]> {
 
       return {
         id: market.condition_id,
+        slug: market.slug,
         title: market.question.slice(0, 60),
         askYes,
         askNo,
@@ -220,6 +222,7 @@ export async function fetchPolymarketDutchingEvents(): Promise<DutchingEvent[]> 
 
     results.push({
       id: event.id,
+      slug: event.slug,
       title: event.title.slice(0, 50),
       outcomeCount: n,
       outcomes: outcomes.sort((a, b) => b.yesAsk - a.yesAsk),

@@ -1,5 +1,6 @@
 export interface MarketData {
   id: string
+  slug?: string
   title: string
   askYes: number
   askNo: number
@@ -25,6 +26,7 @@ export interface DutchingOutcome {
 
 export interface DutchingEvent {
   id: string
+  slug?: string
   title: string
   outcomeCount: number
   outcomes: DutchingOutcome[]
