@@ -4,7 +4,7 @@ const BASE_URL = 'https://api.predict.fun/v1'
 
 interface PredictMarket {
   id: number
-  slug: string
+  slug?: string
   title: string
   categorySlug: string
   outcomes: { name: string }[]
@@ -62,6 +62,14 @@ function getDepth(levels: [number, number][]): number {
   return levels.reduce((sum, l) => sum + l[1], 0)
 }
 
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<MarketData[]> {
   const headers = { 'x-api-key': apiKey }
 
@@ -107,7 +115,7 @@ export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<Mark
 
           return {
             id: String(market.id),
-            slug: market.slug,
+            slug: market.slug || generateSlug(market.title),
             title: market.title.slice(0, 60),
             askYes,
             askNo,
