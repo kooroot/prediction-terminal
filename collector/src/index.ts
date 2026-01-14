@@ -38,16 +38,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
-// Safe JSON response helper (handles circular references)
-function safeJsonResponse(data: unknown, options?: { status?: number; headers?: Record<string, string> }) {
+// Safe JSON response helper (avoids Response.json which may cause stack overflow in Bun)
+function jsonResponse(data: unknown, status = 200): Response {
   try {
-    return Response.json(data, { status: options?.status, headers: options?.headers })
+    const body = JSON.stringify(data)
+    return new Response(body, {
+      status,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    })
   } catch (error) {
     console.error('[Server] JSON serialization error:', error)
-    return Response.json(
-      { error: 'Failed to serialize response', message: String(error) },
-      { status: 500, headers: options?.headers }
-    )
+    return new Response(JSON.stringify({ error: 'Failed to serialize response' }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    })
   }
 }
 
@@ -66,7 +76,7 @@ const server = Bun.serve({
 
       // Root path - show API info
       if (path === '/') {
-        return safeJsonResponse({
+        return jsonResponse({
           name: 'Prediction Market Data Collector',
           status: 'running',
           endpoints: {
@@ -76,12 +86,12 @@ const server = Bun.serve({
           },
           platforms: ['polymarket', 'predictfun', 'kalshi'],
           types: ['binary', 'dutching'],
-        }, { headers: corsHeaders })
+        })
       }
 
       // Health check
       if (path === '/health') {
-        return safeJsonResponse({ status: 'ok', timestamp: Date.now() }, { headers: corsHeaders })
+        return jsonResponse({ status: 'ok', timestamp: Date.now() })
       }
 
       // Cache status endpoint
@@ -101,7 +111,7 @@ const server = Bun.serve({
             dutching: cache.kalshi.dutching ? { updatedAt: cache.kalshi.dutching.updatedAt, count: cache.kalshi.dutching.data.length } : null,
           },
         }
-        return safeJsonResponse(status, { headers: corsHeaders })
+        return jsonResponse(status)
       }
 
       // Cache data endpoint: /api/cache/:platform/:type
@@ -110,34 +120,28 @@ const server = Bun.serve({
         const [, platform, type] = cacheMatch as [string, Platform, DataType]
 
         if (!['polymarket', 'predictfun', 'kalshi'].includes(platform)) {
-          return safeJsonResponse({ error: 'Invalid platform' }, { status: 400, headers: corsHeaders })
+          return jsonResponse({ error: 'Invalid platform' }, 400)
         }
 
         if (!['binary', 'dutching'].includes(type)) {
-          return safeJsonResponse({ error: 'Invalid type' }, { status: 400, headers: corsHeaders })
+          return jsonResponse({ error: 'Invalid type' }, 400)
         }
 
         const cache = scheduler.getCache()
         const cachedData = cache[platform]?.[type]
 
         if (!cachedData) {
-          return safeJsonResponse(
-            { error: 'Data not yet available', platform, type },
-            { status: 503, headers: corsHeaders }
-          )
+          return jsonResponse({ error: 'Data not yet available', platform, type }, 503)
         }
 
-        return safeJsonResponse(cachedData, { headers: corsHeaders })
+        return jsonResponse(cachedData)
       }
 
       // 404 for unknown routes
-      return safeJsonResponse({ error: 'Not found' }, { status: 404, headers: corsHeaders })
+      return jsonResponse({ error: 'Not found' }, 404)
     } catch (error) {
       console.error('[Server] Request error:', error)
-      return safeJsonResponse(
-        { error: 'Internal server error', message: String(error) },
-        { status: 500, headers: corsHeaders }
-      )
+      return jsonResponse({ error: 'Internal server error', message: String(error) }, 500)
     }
   },
 })
