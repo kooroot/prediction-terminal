@@ -3,14 +3,24 @@ import type { Platform, DataType } from './types'
 
 // Configuration from environment variables
 const PORT = Number(process.env.PORT) || 3001
-const REFRESH_INTERVAL = Number(process.env.REFRESH_INTERVAL) || 5000
+
+// Per-platform refresh intervals (in milliseconds)
+// Predict.fun has strict rate limits, so use longer interval
+const POLYMARKET_INTERVAL = Number(process.env.POLYMARKET_INTERVAL) || 5000  // 5 seconds
+const PREDICTFUN_INTERVAL = Number(process.env.PREDICTFUN_INTERVAL) || 60000 // 60 seconds (rate limit)
+const KALSHI_INTERVAL = Number(process.env.KALSHI_INTERVAL) || 10000        // 10 seconds
+
 const PREDICT_FUN_API_KEY = process.env.PREDICT_FUN_API_KEY
 const KALSHI_KEY_ID = process.env.KALSHI_KEY_ID
 const KALSHI_PRIVATE_KEY = process.env.KALSHI_PRIVATE_KEY
 
-// Initialize scheduler
+// Initialize scheduler with per-platform intervals
 const scheduler = new DataScheduler({
-  refreshInterval: REFRESH_INTERVAL,
+  platformIntervals: {
+    polymarket: POLYMARKET_INTERVAL,
+    predictfun: PREDICTFUN_INTERVAL,
+    kalshi: KALSHI_INTERVAL,
+  },
   predictfunApiKey: PREDICT_FUN_API_KEY,
   kalshiCredentials: KALSHI_KEY_ID && KALSHI_PRIVATE_KEY ? {
     keyId: KALSHI_KEY_ID,
@@ -96,12 +106,17 @@ const server = Bun.serve({
   },
 })
 
+const intervals = scheduler.getIntervals()
 console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║           Prediction Market Data Collector                  ║
 ╠════════════════════════════════════════════════════════════╣
 ║  Server running on http://localhost:${PORT}                    ║
-║  Refresh interval: ${REFRESH_INTERVAL}ms                              ║
+║                                                            ║
+║  Per-platform refresh intervals:                           ║
+║    Polymarket:  ${String(intervals.polymarket).padEnd(6)}ms                            ║
+║    Predict.fun: ${String(intervals.predictfun).padEnd(6)}ms (rate limit protection)   ║
+║    Kalshi:      ${String(intervals.kalshi).padEnd(6)}ms                            ║
 ║                                                            ║
 ║  Endpoints:                                                ║
 ║    GET /health                    - Health check           ║
