@@ -188,13 +188,21 @@ function TabButton({
 function BinaryMarketsTable({ markets, opportunities }: { markets: MarketData[]; opportunities: number }) {
   return (
     <div className="space-y-4">
-      {opportunities > 0 && (
+      {opportunities > 0 ? (
         <div className="border border-green-500/30 bg-green-500/5 px-4 py-3">
           <div className="flex items-center gap-2 text-sm">
             <span className="text-green-500">▲</span>
             <span className="text-green-500">{opportunities} arbitrage opportunities detected</span>
           </div>
           <p className="mt-1 text-sm text-zinc-600">condition: ask(YES) + ask(NO) &lt; 1.00</p>
+        </div>
+      ) : (
+        <div className="border border-zinc-700 bg-zinc-900/50 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-zinc-500">○</span>
+            <span className="text-zinc-400">no arbitrage opportunities currently</span>
+          </div>
+          <p className="mt-1 text-sm text-zinc-600">all markets are efficiently priced (sum ≥ 100%)</p>
         </div>
       )}
 
@@ -220,7 +228,16 @@ function BinaryMarketsTable({ markets, opportunities }: { markets: MarketData[];
                   className={`border-b border-zinc-800/50 ${hasOpp ? 'bg-green-500/5' : 'hover:bg-zinc-900/30'}`}
                 >
                   <td className="px-3 py-2 text-zinc-600 hide-mobile">{String(i + 1).padStart(2, '0')}</td>
-                  <td className="max-w-[300px] truncate px-3 py-2 text-zinc-300 market-title">{market.title}</td>
+                  <td className="max-w-[300px] truncate px-3 py-2 market-title">
+                    <a
+                      href={`https://predict.fun/market/${market.slug || market.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-zinc-300 hover:text-green-400 hover:underline"
+                    >
+                      {market.title}
+                    </a>
+                  </td>
                   <td className="px-3 py-2 text-right text-zinc-400 hide-mobile">{(market.askYes * 100).toFixed(1)}%</td>
                   <td className="px-3 py-2 text-right text-zinc-400 hide-mobile">{(market.askNo * 100).toFixed(1)}%</td>
                   <td className={`px-3 py-2 text-right ${market.sumAsks < 0.98 ? 'text-green-500' : 'text-zinc-400'}`}>
@@ -247,7 +264,7 @@ function BinaryMarketsTable({ markets, opportunities }: { markets: MarketData[];
 function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEvent[]; yesOpps: number; noOpps: number }) {
   return (
     <div className="space-y-4">
-      {(yesOpps > 0 || noOpps > 0) && (
+      {(yesOpps > 0 || noOpps > 0) ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {yesOpps > 0 && (
             <div className="border border-green-500/30 bg-green-500/5 px-4 py-3">
@@ -267,6 +284,14 @@ function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEven
               <p className="mt-1 text-sm text-zinc-600">condition: Σ(NO asks) &lt; (N-1)</p>
             </div>
           )}
+        </div>
+      ) : (
+        <div className="border border-zinc-700 bg-zinc-900/50 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-zinc-500">○</span>
+            <span className="text-zinc-400">no dutching opportunities currently</span>
+          </div>
+          <p className="mt-1 text-sm text-zinc-600">all multi-outcome events are efficiently priced</p>
         </div>
       )}
 
@@ -299,7 +324,16 @@ function DutchingEventsTable({ events, yesOpps, noOpps }: { events: DutchingEven
                   className={`border-b border-zinc-800/50 ${hasOpp ? 'bg-green-500/5' : 'hover:bg-zinc-900/30'}`}
                 >
                   <td className="px-3 py-2 text-zinc-600 hide-mobile">{String(i + 1).padStart(2, '0')}</td>
-                  <td className="max-w-[240px] truncate px-3 py-2 text-zinc-300 market-title">{event.title}</td>
+                  <td className="max-w-[240px] truncate px-3 py-2 market-title">
+                    <a
+                      href={`https://predict.fun/market/${event.slug || event.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-zinc-300 hover:text-green-400 hover:underline"
+                    >
+                      {event.title}
+                    </a>
+                  </td>
                   <td className="px-3 py-2 text-right text-zinc-400">{event.outcomeCount}</td>
                   <td className={`px-3 py-2 text-right hide-mobile ${event.sumYesAsks < 0.97 ? 'text-green-500' : 'text-zinc-400'}`}>
                     {(event.sumYesAsks * 100).toFixed(1)}%

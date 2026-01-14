@@ -4,6 +4,7 @@ const BASE_URL = 'https://api.predict.fun/v1'
 
 interface PredictMarket {
   id: number
+  slug: string
   title: string
   categorySlug: string
   outcomes: { name: string }[]
@@ -106,6 +107,7 @@ export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<Mark
 
           return {
             id: String(market.id),
+            slug: market.slug,
             title: market.title.slice(0, 60),
             askYes,
             askNo,
@@ -229,6 +231,7 @@ export async function fetchPredictfunDutchingEvents(apiKey: string): Promise<Dut
 
       categoryDisplays.push({
         id: category.slug,
+        slug: category.slug,
         title: category.title.slice(0, 45),
         outcomeCount: n,
         outcomes: outcomes.sort((a, b) => b.yesAsk - a.yesAsk),

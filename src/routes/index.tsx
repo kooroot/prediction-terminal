@@ -1,10 +1,38 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
+import { fetchCacheStatus } from '~/lib/cache/client'
+
+const CACHE_SERVER_URL = process.env.CACHE_SERVER_URL || 'http://localhost:3001'
+
+const getCacheStatus = createServerFn({ method: 'GET' }).handler(async () => {
+  try {
+    return await fetchCacheStatus(CACHE_SERVER_URL)
+  } catch {
+    return null
+  }
+})
 
 export const Route = createFileRoute('/')({
   component: HomePage,
+  loader: async () => {
+    const status = await getCacheStatus()
+    return { status }
+  },
 })
 
 function HomePage() {
+  const { status } = Route.useLoaderData()
+
+  // Determine status for each market based on cache data
+  const polymarketStatus = status?.polymarket?.binary || status?.polymarket?.dutching ? 'active' : 'pending'
+  const predictfunStatus = status?.predictfun?.binary || status?.predictfun?.dutching ? 'active' : 'pending'
+  const kalshiStatus = status?.kalshi?.binary || status?.kalshi?.dutching ? 'active' : 'pending'
+
+  // Get opportunity counts
+  const polymarketCount = (status?.polymarket?.binary?.count || 0) + (status?.polymarket?.dutching?.count || 0)
+  const predictfunCount = (status?.predictfun?.binary?.count || 0) + (status?.predictfun?.dutching?.count || 0)
+  const kalshiCount = (status?.kalshi?.binary?.count || 0) + (status?.kalshi?.dutching?.count || 0)
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -23,21 +51,24 @@ function HomePage() {
           name="polymarket"
           chain="polygon"
           type="CLOB"
-          status="active"
+          status={polymarketStatus}
+          marketCount={polymarketCount}
           href="/polymarket"
         />
         <MarketCard
           name="predict.fun"
           chain="BNB"
           type="CLOB"
-          status="pending"
+          status={predictfunStatus}
+          marketCount={predictfunCount}
           href="/predictfun"
         />
         <MarketCard
           name="kalshi"
           chain="CFTC"
           type="exchange"
-          status="pending"
+          status={kalshiStatus}
+          marketCount={kalshiCount}
           href="/kalshi"
         />
       </div>
@@ -101,12 +132,14 @@ function MarketCard({
   chain,
   type,
   status,
+  marketCount,
   href,
 }: {
   name: string
   chain: string
   type: string
   status: 'active' | 'pending'
+  marketCount: number
   href: string
 }) {
   return (
@@ -136,9 +169,9 @@ function MarketCard({
           <span className="text-zinc-400">{type}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-zinc-600">opportunities</span>
+          <span className="text-zinc-600">markets</span>
           <span className={status === 'active' ? 'text-green-500' : 'text-zinc-600'}>
-            {status === 'active' ? 'scanning...' : '--'}
+            {status === 'active' ? marketCount.toLocaleString() : '--'}
           </span>
         </div>
       </div>
