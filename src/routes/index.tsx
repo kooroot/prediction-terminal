@@ -14,7 +14,7 @@ function HomePage() {
           <span className="text-zinc-100">ls -la ./markets</span>
           <span className="cursor" />
         </div>
-        <p className="text-xs text-zinc-600">// scanning prediction market orderbooks for arbitrage</p>
+        <p className="text-sm text-zinc-600">// scanning prediction market orderbooks for arbitrage</p>
       </div>
 
       {/* Market Cards */}
@@ -28,14 +28,14 @@ function HomePage() {
         />
         <MarketCard
           name="predict.fun"
-          chain="blast"
+          chain="BNB"
           type="CLOB"
           status="pending"
           href="/predictfun"
         />
         <MarketCard
           name="kalshi"
-          chain="regulated"
+          chain="CFTC"
           type="exchange"
           status="pending"
           href="/kalshi"
@@ -45,7 +45,7 @@ function HomePage() {
       {/* Info Section */}
       <div className="border border-zinc-800 bg-zinc-900/30">
         <div className="border-b border-zinc-800 px-4 py-2">
-          <span className="text-xs text-zinc-500">README.md</span>
+          <span className="text-sm text-zinc-500">README.md</span>
         </div>
         <div className="space-y-4 p-4 text-sm">
           <div>
@@ -57,7 +57,7 @@ function HomePage() {
               <span className="text-green-500">##</span>
               <div>
                 <span className="text-zinc-200">Binary Arbitrage</span>
-                <p className="mt-1 text-xs text-zinc-600">
+                <p className="mt-1 text-sm text-zinc-600">
                   when ask(YES) + ask(NO) &lt; 1.00 → buy both sides → guaranteed profit
                 </p>
               </div>
@@ -67,7 +67,7 @@ function HomePage() {
               <span className="text-green-500">##</span>
               <div>
                 <span className="text-zinc-200">Dutching (Multi-Outcome)</span>
-                <p className="mt-1 text-xs text-zinc-600">
+                <p className="mt-1 text-sm text-zinc-600">
                   when sum(YES asks) &lt; 1.00 in mutually exclusive markets → buy all outcomes
                 </p>
               </div>
@@ -75,7 +75,7 @@ function HomePage() {
           </div>
 
           <div className="border-t border-zinc-800 pt-4">
-            <div className="flex items-center gap-2 text-xs text-zinc-600">
+            <div className="flex items-center gap-2 text-sm text-zinc-600">
               <span className="text-yellow-500">!</span>
               <span>slippage, fees, and execution risk not factored into displayed margins</span>
             </div>
@@ -84,7 +84,7 @@ function HomePage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="flex items-center gap-6 text-xs text-zinc-600">
+      <div className="flex items-center gap-6 text-sm text-zinc-600">
         <span>
           <span className="text-zinc-500">last_scan:</span> {new Date().toLocaleTimeString()}
         </span>
@@ -118,7 +118,7 @@ function MarketCard({
         <div className="flex items-center justify-between">
           <span className="text-zinc-400">{name}</span>
           <span
-            className={`text-xs ${
+            className={`text-sm ${
               status === 'active' ? 'text-green-500' : 'text-zinc-600'
             }`}
           >
@@ -126,7 +126,7 @@ function MarketCard({
           </span>
         </div>
       </div>
-      <div className="space-y-2 px-4 py-3 text-xs">
+      <div className="space-y-2 px-4 py-3 text-sm">
         <div className="flex justify-between">
           <span className="text-zinc-600">chain</span>
           <span className="text-zinc-400">{chain}</span>
@@ -142,7 +142,7 @@ function MarketCard({
           </span>
         </div>
       </div>
-      <div className="border-t border-zinc-800 px-4 py-2 text-xs text-zinc-600 transition-colors group-hover:text-zinc-400">
+      <div className="border-t border-zinc-800 px-4 py-2 text-sm text-zinc-600 transition-colors group-hover:text-zinc-400">
         → view markets
       </div>
     </Link>
