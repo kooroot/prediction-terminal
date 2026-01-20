@@ -4,14 +4,17 @@ const GAMMA_HOST = 'https://gamma-api.polymarket.com'
 const CLOB_HOST = 'https://clob.polymarket.com'
 
 interface GammaMarket {
-  condition_id: string
+  conditionId: string
   question: string
   slug: string
-  tokens: { token_id: string; outcome: string }[]
+  clobTokenIds: string  // JSON array string: ["yesTokenId", "noTokenId"]
   active: boolean
   closed: boolean
+  acceptingOrders: boolean
+  enableOrderBook: boolean
+  negRisk: boolean
   liquidity: string
-  volume_num_24hr: string
+  volume24hr: string
 }
 
 interface OrderBook {
@@ -55,26 +58,47 @@ function getDepth(levels: { price: string; size: string }[]): number {
   return levels.reduce((sum, l) => sum + Number.parseFloat(l.size), 0)
 }
 
+function parseTokenIds(clobTokenIds: string): string[] {
+  try {
+    return JSON.parse(clobTokenIds) as string[]
+  } catch {
+    return []
+  }
+}
+
 export async function fetchPolymarketBinaryMarkets(): Promise<MarketData[]> {
-  const response = await fetch(`${GAMMA_HOST}/markets?active=true&closed=false&limit=50`)
+  const response = await fetch(`${GAMMA_HOST}/markets?active=true&closed=false&limit=200`)
   if (!response.ok) throw new Error('Failed to fetch Polymarket markets')
 
   const markets = (await response.json()) as GammaMarket[]
 
+  // Filter for binary markets (same logic as polymarket-dashboard.ts)
   const validMarkets = markets
-    .filter((m) => m.tokens?.length === 2 && Number.parseFloat(m.liquidity || '0') > 1000)
+    .filter((m) => {
+      const tokenIds = parseTokenIds(m.clobTokenIds)
+      return (
+        m.enableOrderBook &&
+        m.active &&
+        !m.closed &&
+        m.acceptingOrders &&
+        !m.negRisk &&  // Binary markets only (non-negRisk)
+        tokenIds.length === 2 &&
+        Number.parseFloat(m.liquidity || '0') >= 5000
+      )
+    })
     .sort((a, b) => Number.parseFloat(b.liquidity || '0') - Number.parseFloat(a.liquidity || '0'))
-    .slice(0, 40)
+    .slice(0, 50)
 
   const orderbookPromises = validMarkets.map(async (market) => {
-    const yesToken = market.tokens.find((t) => t.outcome === 'Yes')
-    const noToken = market.tokens.find((t) => t.outcome === 'No')
-    if (!yesToken || !noToken) return null
+    const tokenIds = parseTokenIds(market.clobTokenIds)
+    const yesTokenId = tokenIds[0]
+    const noTokenId = tokenIds[1]
+    if (!yesTokenId || !noTokenId) return null
 
     try {
       const [yesOb, noOb] = await Promise.all([
-        fetch(`${CLOB_HOST}/book?token_id=${yesToken.token_id}`).then((r) => r.json() as Promise<OrderBook>),
-        fetch(`${CLOB_HOST}/book?token_id=${noToken.token_id}`).then((r) => r.json() as Promise<OrderBook>),
+        fetch(`${CLOB_HOST}/book?token_id=${yesTokenId}`).then((r) => r.json() as Promise<OrderBook>),
+        fetch(`${CLOB_HOST}/book?token_id=${noTokenId}`).then((r) => r.json() as Promise<OrderBook>),
       ])
 
       const askYes = getBestAsk(yesOb.asks)
@@ -83,12 +107,16 @@ export async function fetchPolymarketBinaryMarkets(): Promise<MarketData[]> {
       const bidNo = getBestBid(noOb.bids)
 
       if (askYes === 0 || askNo === 0) return null
+      if (yesOb.bids.length === 0 || noOb.bids.length === 0) return null
 
       const sumAsks = askYes + askNo
+      // Filter out invalid sums (same as dashboard)
+      if (sumAsks > 1.10 || sumAsks < 0.90) return null
+
       const margin = 1 - sumAsks
 
       return {
-        id: market.condition_id,
+        id: market.conditionId,
         slug: market.slug,
         title: market.question.slice(0, 60),
         askYes,
@@ -98,7 +126,7 @@ export async function fetchPolymarketBinaryMarkets(): Promise<MarketData[]> {
         sumAsks,
         margin,
         liquidity: Number.parseFloat(market.liquidity || '0'),
-        volume24h: Number.parseFloat(market.volume_num_24hr || '0'),
+        volume24h: Number.parseFloat(market.volume24hr || '0'),
       } satisfies MarketData
     } catch {
       return null
@@ -110,7 +138,7 @@ export async function fetchPolymarketBinaryMarkets(): Promise<MarketData[]> {
   for (const r of allResults) {
     if (r !== null) results.push(r)
   }
-  return results.sort((a, b) => b.margin - a.margin)
+  return results.sort((a, b) => b.liquidity - a.liquidity)
 }
 
 export async function fetchPolymarketDutchingEvents(): Promise<DutchingEvent[]> {
