@@ -1,8 +1,10 @@
 import { DataScheduler } from './scheduler'
+import { NotificationScheduler, parseAlertHours } from './notifications/scheduler'
 import type { Platform, DataType } from './types'
 
 // Configuration from environment variables
 const PORT = Number(process.env.PORT) || 3001
+const TELEGRAM_ALERT_HOURS = parseAlertHours(process.env.TELEGRAM_ALERT_HOURS)
 
 // Per-platform refresh intervals (in milliseconds)
 // runningFlags prevent overlapping refreshes, so intervals can be shorter
@@ -28,8 +30,15 @@ const scheduler = new DataScheduler({
   } : undefined,
 })
 
-// Start the scheduler
+// Start the data scheduler
 scheduler.start()
+
+// Initialize and start notification scheduler
+const notificationScheduler = new NotificationScheduler({
+  alertHours: TELEGRAM_ALERT_HOURS,
+  getCache: () => scheduler.getCache(),
+})
+notificationScheduler.start()
 
 // CORS headers
 const corsHeaders = {
@@ -64,7 +73,7 @@ function jsonResponse(data: unknown, status = 200): Response {
 // HTTP Server using Bun.serve
 const server = Bun.serve({
   port: PORT,
-  fetch(req) {
+  async fetch(req) {
     try {
       const url = new URL(req.url)
       const path = url.pathname
@@ -83,6 +92,9 @@ const server = Bun.serve({
             health: 'GET /health',
             status: 'GET /api/cache/status',
             data: 'GET /api/cache/:platform/:type',
+            topVolumeAll: 'GET /api/top-volume/all',
+            topVolumePlatform: 'GET /api/top-volume/:platform',
+            notifyTest: 'GET /api/notify/test',
           },
           platforms: ['polymarket', 'predictfun', 'kalshi'],
           types: ['binary', 'dutching'],
@@ -137,6 +149,66 @@ const server = Bun.serve({
         return jsonResponse(cachedData)
       }
 
+      // Manual trigger for Telegram notification (for testing)
+      if (path === '/api/notify/test') {
+        const success = await notificationScheduler.sendNow()
+        return jsonResponse({
+          success,
+          message: success ? 'Notification sent' : 'Failed to send notification (check Telegram config)',
+        })
+      }
+
+      // Top Volume endpoint: /api/top-volume/all (combined across all platforms)
+      if (path === '/api/top-volume/all') {
+        const cache = scheduler.getCache()
+        const allMarkets = [
+          ...(cache.polymarket.binary?.data ?? []),
+          ...(cache.predictfun.binary?.data ?? []),
+          ...(cache.kalshi.binary?.data ?? []),
+        ]
+
+        const sortedByVolume = allMarkets
+          .filter((m) => (m.volume24h ?? 0) > 0)
+          .sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
+          .slice(0, 20)
+
+        return jsonResponse({
+          data: sortedByVolume,
+          updatedAt: Date.now(),
+          type: 'top-volume',
+          scope: 'all',
+        })
+      }
+
+      // Top Volume endpoint: /api/top-volume/:platform
+      const topVolumeMatch = path.match(/^\/api\/top-volume\/([^/]+)$/)
+      if (topVolumeMatch) {
+        const [, platform] = topVolumeMatch as [string, Platform]
+
+        if (!['polymarket', 'predictfun', 'kalshi'].includes(platform)) {
+          return jsonResponse({ error: 'Invalid platform' }, 400)
+        }
+
+        const cache = scheduler.getCache()
+        const platformCache = cache[platform]?.binary
+
+        if (!platformCache) {
+          return jsonResponse({ error: 'Data not yet available', platform }, 503)
+        }
+
+        const sortedByVolume = platformCache.data
+          .filter((m) => (m.volume24h ?? 0) > 0)
+          .sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
+          .slice(0, 20)
+
+        return jsonResponse({
+          data: sortedByVolume,
+          updatedAt: platformCache.updatedAt,
+          type: 'top-volume',
+          platform,
+        })
+      }
+
       // 404 for unknown routes
       return jsonResponse({ error: 'Not found' }, 404)
     } catch (error) {
@@ -147,6 +219,7 @@ const server = Bun.serve({
 })
 
 const intervals = scheduler.getIntervals()
+const telegramEnabled = process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID
 console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║           Prediction Market Data Collector                  ║
@@ -158,11 +231,16 @@ console.log(`
 ║    Predict.fun: ${String(intervals.predictfun).padEnd(6)}ms (rate limit protection)   ║
 ║    Kalshi:      ${String(intervals.kalshi).padEnd(6)}ms                            ║
 ║                                                            ║
+║  Telegram Alerts: ${telegramEnabled ? `Enabled (${TELEGRAM_ALERT_HOURS.join(', ')}h KST)`.padEnd(27) : 'Disabled (set TELEGRAM_BOT_TOKEN)'}║
+║                                                            ║
 ║  Endpoints:                                                ║
 ║    GET /                          - API info               ║
 ║    GET /health                    - Health check           ║
 ║    GET /api/cache/status          - Cache status           ║
 ║    GET /api/cache/:platform/:type - Get cached data        ║
+║    GET /api/top-volume/all        - Top 20 all platforms   ║
+║    GET /api/top-volume/:platform  - Top 20 by platform     ║
+║    GET /api/notify/test           - Test Telegram alert    ║
 ║                                                            ║
 ║  Platforms: polymarket, predictfun, kalshi                 ║
 ║  Types: binary, dutching                                   ║
@@ -173,12 +251,14 @@ console.log(`
 process.on('SIGINT', () => {
   console.log('\n[Server] Shutting down...')
   scheduler.stop()
+  notificationScheduler.stop()
   process.exit(0)
 })
 
 process.on('SIGTERM', () => {
   console.log('\n[Server] Shutting down...')
   scheduler.stop()
+  notificationScheduler.stop()
   process.exit(0)
 })
 

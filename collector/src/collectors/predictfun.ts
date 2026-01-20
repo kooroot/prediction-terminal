@@ -125,6 +125,7 @@ export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<Mark
             margin,
             liquidity: stats?.totalLiquidityUsd ?? 0,
             volume24h: stats?.volume24hUsd ?? 0,
+            platform: 'predictfun',
           } satisfies MarketData
         } catch {
           return null

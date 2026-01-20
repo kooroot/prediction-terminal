@@ -127,6 +127,7 @@ export async function fetchPolymarketBinaryMarkets(): Promise<MarketData[]> {
         margin,
         liquidity: Number.parseFloat(market.liquidity || '0'),
         volume24h: Number.parseFloat(market.volume24hr || '0'),
+        platform: 'polymarket',
       } satisfies MarketData
     } catch {
       return null

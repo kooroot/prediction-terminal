@@ -73,6 +73,23 @@ function HomePage() {
         />
       </div>
 
+      {/* Top Volume Link */}
+      <Link
+        to="/top-volume"
+        className="group block border border-blue-500/30 bg-blue-500/5 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10"
+      >
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="text-blue-500">◆</span>
+            <div>
+              <span className="text-zinc-200">Top Volume Markets</span>
+              <p className="text-sm text-zinc-600">top 20 markets by 24h trading volume across all platforms</p>
+            </div>
+          </div>
+          <span className="text-zinc-600 transition-colors group-hover:text-zinc-400">→</span>
+        </div>
+      </Link>
+
       {/* Info Section */}
       <div className="border border-zinc-800 bg-zinc-900/30">
         <div className="border-b border-zinc-800 px-4 py-2">

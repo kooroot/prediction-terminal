@@ -106,6 +106,9 @@ export async function fetchKalshiBinaryMarkets(credentials: KalshiCredentials): 
       const sumAsks = finalAskYes + finalAskNo
       const margin = 1 - sumAsks
 
+      const closeTime = new Date(market.close_time)
+      const daysToExpiry = Math.max(0, (closeTime.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
       results.push({
         id: market.ticker,
         title: market.title.slice(0, 60),
@@ -117,6 +120,9 @@ export async function fetchKalshiBinaryMarkets(credentials: KalshiCredentials): 
         margin,
         liquidity: market.liquidity,
         volume24h: market.volume_24h,
+        endDate: market.close_time,
+        daysToExpiry: Math.round(daysToExpiry),
+        platform: 'kalshi',
       })
     } catch (error) {
       console.error(`Failed to fetch orderbook for ${market.ticker}:`, error)

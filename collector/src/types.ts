@@ -10,6 +10,9 @@ export interface MarketData {
   margin: number
   liquidity: number
   volume24h?: number
+  endDate?: string
+  daysToExpiry?: number
+  platform?: Platform
 }
 
 export interface DutchingOutcome {
