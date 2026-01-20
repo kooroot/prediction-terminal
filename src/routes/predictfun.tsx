@@ -4,12 +4,16 @@ import { useState } from 'react'
 import { fetchBinaryMarketsFromCache, fetchDutchingEventsFromCache } from '~/lib/cache/client'
 import type { MarketData, DutchingEvent } from '~/lib/types'
 
-// Cache server URL - set via environment variable
-const CACHE_SERVER_URL = process.env.CACHE_SERVER_URL || 'http://localhost:3001'
+// Hardcoded for Cloudflare Workers - process.env doesn't work reliably in TanStack Start server functions
+const CACHE_SERVER_URL = 'https://robin-researcher-barcelona-msgid.trycloudflare.com'
+
+function getCacheServerUrl(): string {
+  return CACHE_SERVER_URL
+}
 
 const getBinaryMarkets = createServerFn({ method: 'GET' }).handler(async () => {
   try {
-    return await fetchBinaryMarketsFromCache('predictfun', CACHE_SERVER_URL)
+    return await fetchBinaryMarketsFromCache('predictfun', getCacheServerUrl())
   } catch {
     return null
   }
@@ -17,7 +21,7 @@ const getBinaryMarkets = createServerFn({ method: 'GET' }).handler(async () => {
 
 const getDutchingEvents = createServerFn({ method: 'GET' }).handler(async () => {
   try {
-    return await fetchDutchingEventsFromCache('predictfun', CACHE_SERVER_URL)
+    return await fetchDutchingEventsFromCache('predictfun', getCacheServerUrl())
   } catch {
     return null
   }

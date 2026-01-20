@@ -9,14 +9,16 @@ export interface CachedData<T> {
   type: DataType
 }
 
-// Get cache server URL from environment or use default
+// Hardcoded URL for Cloudflare Workers compatibility
+// process.env doesn't work reliably in TanStack Start server functions on Workers
+const DEFAULT_CACHE_SERVER_URL = 'https://robin-researcher-barcelona-msgid.trycloudflare.com'
+
 function getCacheServerUrl(): string {
-  // In Cloudflare Workers, we'll use env binding
-  // For development, use the default localhost
+  // Try process.env for local development, fall back to hardcoded for production
   if (typeof process !== 'undefined' && process.env?.CACHE_SERVER_URL) {
     return process.env.CACHE_SERVER_URL
   }
-  return 'http://localhost:3001'
+  return DEFAULT_CACHE_SERVER_URL
 }
 
 /**

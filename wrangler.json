@@ -1,8 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "prediction-terminal",
-  "compatibility_date": "2025-01-01",
-  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+  "compatibility_date": "2025-09-02",
+  "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
   "vars": {
     "CACHE_SERVER_URL": "https://robin-researcher-barcelona-msgid.trycloudflare.com"

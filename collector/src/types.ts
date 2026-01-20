@@ -45,7 +45,7 @@ export interface DutchingEvent {
 }
 
 export type Platform = 'polymarket' | 'predictfun' | 'kalshi'
-export type DataType = 'binary' | 'dutching'
+export type DataType = 'binary' | 'dutching' | 'topVolume'
 
 export interface CachedData<T> {
   data: T
@@ -58,13 +58,16 @@ export interface CacheStore {
   polymarket: {
     binary: CachedData<MarketData[]> | null
     dutching: CachedData<DutchingEvent[]> | null
+    topVolume: CachedData<MarketData[]> | null  // All markets (binary + multi-outcome) for volume ranking
   }
   predictfun: {
     binary: CachedData<MarketData[]> | null
     dutching: CachedData<DutchingEvent[]> | null
+    topVolume: CachedData<MarketData[]> | null
   }
   kalshi: {
     binary: CachedData<MarketData[]> | null
     dutching: CachedData<DutchingEvent[]> | null
+    topVolume: CachedData<MarketData[]> | null
   }
 }
