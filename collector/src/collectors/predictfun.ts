@@ -65,22 +65,30 @@ function getDepth(levels: [number, number][]): number {
 export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<MarketData[]> {
   const headers = { 'x-api-key': apiKey }
 
-  const response = await fetch(`${BASE_URL}/markets?status=OPEN&first=100`, { headers })
+  // Use categories endpoint (same as dutching) - /markets endpoint doesn't work reliably
+  const response = await fetch(`${BASE_URL}/categories?status=OPEN&first=150`, { headers })
   if (!response.ok) {
     const text = await response.text()
     throw new Error(`Predict.fun API error: ${response.status} ${response.statusText} - ${text}`)
   }
 
-  const data = (await response.json()) as { data: PredictMarket[] }
-  const markets = data.data ?? []
+  const data = (await response.json()) as { data: Category[] }
+  const categories = data.data ?? []
+
+  // Binary markets: categories with exactly 1 market (the market itself is the binary YES/NO)
+  const binaryCategories = categories.filter((cat) => cat.markets.length === 1)
+  const allMarkets = binaryCategories.flatMap((cat) =>
+    cat.markets.map((m) => ({ market: m, category: cat }))
+  )
+
   const results: MarketData[] = []
 
   const batchSize = 30
-  for (let i = 0; i < Math.min(markets.length, 100); i += batchSize) {
-    const batch = markets.slice(i, i + batchSize)
+  for (let i = 0; i < allMarkets.length; i += batchSize) {
+    const batch = allMarkets.slice(i, i + batchSize)
 
     const batchResults = await Promise.all(
-      batch.map(async (market) => {
+      batch.map(async ({ market, category }) => {
         try {
           const [obResp, stResp] = await Promise.all([
             fetch(`${BASE_URL}/markets/${market.id}/orderbook`, { headers }),
@@ -98,7 +106,7 @@ export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<Mark
           const askYes = getBestAsk(orderbook.asks)
           const bidYes = getBestBid(orderbook.bids)
 
-          if (askYes === 0) return null
+          if (askYes === 0 || orderbook.asks.length === 0 || orderbook.bids.length === 0) return null
 
           const askNo = bidYes > 0 ? 1 - bidYes : 0
           const bidNo = askYes > 0 ? 1 - askYes : 0
@@ -107,7 +115,7 @@ export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<Mark
 
           return {
             id: String(market.id),
-            slug: market.slug,
+            slug: category.slug,
             title: market.title.slice(0, 60),
             askYes,
             askNo,
