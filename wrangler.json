@@ -5,6 +5,6 @@
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
   "main": "@tanstack/react-start/server-entry",
   "vars": {
-    "CACHE_SERVER_URL": "https://argument-coaches-difficulty-hopefully.trycloudflare.com"
+    "CACHE_SERVER_URL": "https://robin-researcher-barcelona-msgid.trycloudflare.com"
   }
 }
