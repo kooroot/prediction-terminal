@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TopVolumeRouteImport } from './routes/top-volume'
 import { Route as PredictfunRouteImport } from './routes/predictfun'
 import { Route as PolymarketRouteImport } from './routes/polymarket'
 import { Route as KalshiRouteImport } from './routes/kalshi'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TopVolumeRoute = TopVolumeRouteImport.update({
+  id: '/top-volume',
+  path: '/top-volume',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PredictfunRoute = PredictfunRouteImport.update({
   id: '/predictfun',
   path: '/predictfun',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/kalshi': typeof KalshiRoute
   '/polymarket': typeof PolymarketRoute
   '/predictfun': typeof PredictfunRoute
+  '/top-volume': typeof TopVolumeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/kalshi': typeof KalshiRoute
   '/polymarket': typeof PolymarketRoute
   '/predictfun': typeof PredictfunRoute
+  '/top-volume': typeof TopVolumeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,20 @@ export interface FileRoutesById {
   '/kalshi': typeof KalshiRoute
   '/polymarket': typeof PolymarketRoute
   '/predictfun': typeof PredictfunRoute
+  '/top-volume': typeof TopVolumeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/kalshi' | '/polymarket' | '/predictfun'
+  fullPaths: '/' | '/kalshi' | '/polymarket' | '/predictfun' | '/top-volume'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/kalshi' | '/polymarket' | '/predictfun'
-  id: '__root__' | '/' | '/kalshi' | '/polymarket' | '/predictfun'
+  to: '/' | '/kalshi' | '/polymarket' | '/predictfun' | '/top-volume'
+  id:
+    | '__root__'
+    | '/'
+    | '/kalshi'
+    | '/polymarket'
+    | '/predictfun'
+    | '/top-volume'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +82,18 @@ export interface RootRouteChildren {
   KalshiRoute: typeof KalshiRoute
   PolymarketRoute: typeof PolymarketRoute
   PredictfunRoute: typeof PredictfunRoute
+  TopVolumeRoute: typeof TopVolumeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/top-volume': {
+      id: '/top-volume'
+      path: '/top-volume'
+      fullPath: '/top-volume'
+      preLoaderRoute: typeof TopVolumeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/predictfun': {
       id: '/predictfun'
       path: '/predictfun'
@@ -107,6 +130,7 @@ const rootRouteChildren: RootRouteChildren = {
   KalshiRoute: KalshiRoute,
   PolymarketRoute: PolymarketRoute,
   PredictfunRoute: PredictfunRoute,
+  TopVolumeRoute: TopVolumeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
