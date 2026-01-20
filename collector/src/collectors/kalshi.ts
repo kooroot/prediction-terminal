@@ -62,20 +62,37 @@ function getDepth(levels: [number, number][]): number {
   return levels.reduce((sum, l) => sum + l[1], 0)
 }
 
-export async function fetchKalshiBinaryMarkets(credentials: KalshiCredentials): Promise<MarketData[]> {
-  // Fetch active markets
+interface FetchOptions {
+  includeAllMarkets?: boolean  // true = sort by volume for ranking, false = sort by margin for arb
+}
+
+export async function fetchKalshiBinaryMarkets(credentials: KalshiCredentials, options: FetchOptions = {}): Promise<MarketData[]> {
+  const { includeAllMarkets = false } = options
+
+  // Fetch active markets - increase limit for volume ranking
   const marketsData = await kalshiFetch<KalshiMarketsResponse>(
     credentials,
-    '/markets?status=open&limit=100'
+    `/markets?status=open&limit=${includeAllMarkets ? 200 : 100}`
   )
 
   const markets = marketsData.markets ?? []
 
-  // Filter to binary markets with reasonable liquidity
-  const validMarkets = markets
-    .filter((m) => m.status === 'open' && m.liquidity > 1000)
-    .sort((a, b) => b.liquidity - a.liquidity)
-    .slice(0, 50)
+  // Filter and sort markets
+  let validMarkets: KalshiMarket[]
+
+  if (includeAllMarkets) {
+    // For volume ranking: lower threshold, sort by 24h volume, take more
+    validMarkets = markets
+      .filter((m) => m.status === 'open' && m.liquidity > 100)
+      .sort((a, b) => b.volume_24h - a.volume_24h)
+      .slice(0, 100)
+  } else {
+    // For arb scanner: higher threshold, sort by liquidity
+    validMarkets = markets
+      .filter((m) => m.status === 'open' && m.liquidity > 1000)
+      .sort((a, b) => b.liquidity - a.liquidity)
+      .slice(0, 50)
+  }
 
   // Fetch orderbooks for each market
   const results: MarketData[] = []
@@ -130,6 +147,10 @@ export async function fetchKalshiBinaryMarkets(credentials: KalshiCredentials): 
     }
   }
 
+  // Sort by volume for volume ranking, by margin for arb scanner
+  if (includeAllMarkets) {
+    return results.sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
+  }
   return results.sort((a, b) => b.margin - a.margin)
 }
 

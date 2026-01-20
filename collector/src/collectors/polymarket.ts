@@ -66,28 +66,41 @@ function parseTokenIds(clobTokenIds: string): string[] {
   }
 }
 
-export async function fetchPolymarketBinaryMarkets(): Promise<MarketData[]> {
-  const response = await fetch(`${GAMMA_HOST}/markets?active=true&closed=false&limit=200`)
+interface FetchOptions {
+  includeAllMarkets?: boolean  // true = include negRisk for volume ranking, false = binary only for arb
+}
+
+export async function fetchPolymarketBinaryMarkets(options: FetchOptions = {}): Promise<MarketData[]> {
+  const { includeAllMarkets = false } = options
+
+  // Fetch more markets to capture high-volume ones
+  const response = await fetch(`${GAMMA_HOST}/markets?active=true&closed=false&limit=500`)
   if (!response.ok) throw new Error('Failed to fetch Polymarket markets')
 
   const markets = (await response.json()) as GammaMarket[]
 
-  // Filter for binary markets (same logic as polymarket-dashboard.ts)
   const validMarkets = markets
     .filter((m) => {
       const tokenIds = parseTokenIds(m.clobTokenIds)
-      return (
+      const baseFilter = (
         m.enableOrderBook &&
         m.active &&
         !m.closed &&
         m.acceptingOrders &&
-        !m.negRisk &&  // Binary markets only (non-negRisk)
-        tokenIds.length === 2 &&
-        Number.parseFloat(m.liquidity || '0') >= 5000
+        tokenIds.length === 2
       )
+
+      if (includeAllMarkets) {
+        // For volume ranking: include ALL markets (binary + multi-outcome)
+        return baseFilter && Number.parseFloat(m.liquidity || '0') >= 500
+      } else {
+        // For arb scanner: binary markets only (negRisk=false)
+        return baseFilter && !m.negRisk && Number.parseFloat(m.liquidity || '0') >= 5000
+      }
     })
-    .sort((a, b) => Number.parseFloat(b.liquidity || '0') - Number.parseFloat(a.liquidity || '0'))
-    .slice(0, 50)
+    // Sort by 24h volume to capture high-volume markets
+    .sort((a, b) => Number.parseFloat(b.volume24hr || '0') - Number.parseFloat(a.volume24hr || '0'))
+    .slice(0, includeAllMarkets ? 100 : 50)
 
   const orderbookPromises = validMarkets.map(async (market) => {
     const tokenIds = parseTokenIds(market.clobTokenIds)
@@ -139,7 +152,8 @@ export async function fetchPolymarketBinaryMarkets(): Promise<MarketData[]> {
   for (const r of allResults) {
     if (r !== null) results.push(r)
   }
-  return results.sort((a, b) => b.liquidity - a.liquidity)
+  // Sort by 24h volume for top volume display
+  return results.sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
 }
 
 export async function fetchPolymarketDutchingEvents(): Promise<DutchingEvent[]> {

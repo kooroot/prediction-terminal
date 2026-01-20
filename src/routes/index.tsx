@@ -2,11 +2,16 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { fetchCacheStatus } from '~/lib/cache/client'
 
-const CACHE_SERVER_URL = process.env.CACHE_SERVER_URL || 'http://localhost:3001'
+// Hardcoded for Cloudflare Workers - process.env doesn't work reliably in TanStack Start server functions
+const CACHE_SERVER_URL = 'https://robin-researcher-barcelona-msgid.trycloudflare.com'
+
+function getCacheServerUrl(): string {
+  return CACHE_SERVER_URL
+}
 
 const getCacheStatus = createServerFn({ method: 'GET' }).handler(async () => {
   try {
-    return await fetchCacheStatus(CACHE_SERVER_URL)
+    return await fetchCacheStatus(getCacheServerUrl())
   } catch {
     return null
   }
@@ -15,8 +20,8 @@ const getCacheStatus = createServerFn({ method: 'GET' }).handler(async () => {
 export const Route = createFileRoute('/')({
   component: HomePage,
   loader: async () => {
-    const status = await getCacheStatus()
-    return { status }
+    // Return static data to debug - no fetch at all
+    return { status: null }
   },
 })
 

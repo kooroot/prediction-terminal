@@ -62,7 +62,12 @@ function getDepth(levels: [number, number][]): number {
   return levels.reduce((sum, l) => sum + l[1], 0)
 }
 
-export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<MarketData[]> {
+interface FetchOptions {
+  includeAllMarkets?: boolean  // true = include all markets for volume ranking, false = binary only for arb
+}
+
+export async function fetchPredictfunBinaryMarkets(apiKey: string, options: FetchOptions = {}): Promise<MarketData[]> {
+  const { includeAllMarkets = false } = options
   const headers = { 'x-api-key': apiKey }
 
   // Use categories endpoint (same as dutching) - /markets endpoint doesn't work reliably
@@ -75,11 +80,20 @@ export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<Mark
   const data = (await response.json()) as { data: Category[] }
   const categories = data.data ?? []
 
-  // Binary markets: categories with exactly 1 market (the market itself is the binary YES/NO)
-  const binaryCategories = categories.filter((cat) => cat.markets.length === 1)
-  const allMarkets = binaryCategories.flatMap((cat) =>
-    cat.markets.map((m) => ({ market: m, category: cat }))
-  )
+  let allMarkets: { market: PredictMarket; category: Category }[]
+
+  if (includeAllMarkets) {
+    // For volume ranking: include ALL markets from all categories (binary + multi-outcome)
+    allMarkets = categories.flatMap((cat) =>
+      cat.markets.map((m) => ({ market: m, category: cat }))
+    )
+  } else {
+    // For arb scanner: binary markets only (categories with exactly 1 market)
+    const binaryCategories = categories.filter((cat) => cat.markets.length === 1)
+    allMarkets = binaryCategories.flatMap((cat) =>
+      cat.markets.map((m) => ({ market: m, category: cat }))
+    )
+  }
 
   const results: MarketData[] = []
 
@@ -138,6 +152,10 @@ export async function fetchPredictfunBinaryMarkets(apiKey: string): Promise<Mark
     }
   }
 
+  // Sort by volume for volume ranking, by margin for arb scanner
+  if (includeAllMarkets) {
+    return results.sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0))
+  }
   return results.sort((a, b) => b.margin - a.margin)
 }
 

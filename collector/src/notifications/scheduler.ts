@@ -92,10 +92,11 @@ export class NotificationScheduler {
         .slice(0, 20)
     }
 
+    // Use topVolume cache which includes all markets (binary + multi-outcome)
     return {
-      polymarket: sortByVolume(cache.polymarket.binary?.data ?? []),
-      predictfun: sortByVolume(cache.predictfun.binary?.data ?? []),
-      kalshi: sortByVolume(cache.kalshi.binary?.data ?? []),
+      polymarket: sortByVolume(cache.polymarket.topVolume?.data ?? []),
+      predictfun: sortByVolume(cache.predictfun.topVolume?.data ?? []),
+      kalshi: sortByVolume(cache.kalshi.topVolume?.data ?? []),
     }
   }
 

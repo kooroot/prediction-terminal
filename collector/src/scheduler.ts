@@ -37,9 +37,9 @@ export class DataScheduler {
   constructor(config: SchedulerConfig) {
     this.config = config
     this.cache = {
-      polymarket: { binary: null, dutching: null },
-      predictfun: { binary: null, dutching: null },
-      kalshi: { binary: null, dutching: null },
+      polymarket: { binary: null, dutching: null, topVolume: null },
+      predictfun: { binary: null, dutching: null, topVolume: null },
+      kalshi: { binary: null, dutching: null, topVolume: null },
     }
     // Merge custom intervals with defaults
     this.intervals = {
@@ -61,9 +61,10 @@ export class DataScheduler {
 
     console.log('[Scheduler] Refreshing Polymarket data...')
     try {
-      const [binary, dutching] = await Promise.all([
-        fetchPolymarketBinaryMarkets(),
+      const [binary, dutching, topVolume] = await Promise.all([
+        fetchPolymarketBinaryMarkets(),  // Binary only for arb scanner
         fetchPolymarketDutchingEvents(),
+        fetchPolymarketBinaryMarkets({ includeAllMarkets: true }),  // All markets for volume ranking
       ])
 
       this.cache.polymarket.binary = {
@@ -78,7 +79,13 @@ export class DataScheduler {
         platform: 'polymarket',
         type: 'dutching',
       }
-      console.log(`[Scheduler] Polymarket: ${binary.length} binary, ${dutching.length} dutching`)
+      this.cache.polymarket.topVolume = {
+        data: topVolume,
+        updatedAt: Date.now(),
+        platform: 'polymarket',
+        type: 'topVolume',
+      }
+      console.log(`[Scheduler] Polymarket: ${binary.length} binary, ${dutching.length} dutching, ${topVolume.length} topVolume`)
     } catch (error) {
       console.error('[Scheduler] Failed to refresh Polymarket:', error)
     } finally {
@@ -100,9 +107,10 @@ export class DataScheduler {
 
     console.log('[Scheduler] Refreshing Predict.fun data...')
     try {
-      const [binary, dutching] = await Promise.all([
-        fetchPredictfunBinaryMarkets(this.config.predictfunApiKey),
+      const [binary, dutching, topVolume] = await Promise.all([
+        fetchPredictfunBinaryMarkets(this.config.predictfunApiKey),  // Binary only for arb scanner
         fetchPredictfunDutchingEvents(this.config.predictfunApiKey),
+        fetchPredictfunBinaryMarkets(this.config.predictfunApiKey, { includeAllMarkets: true }),  // All markets for volume ranking
       ])
 
       this.cache.predictfun.binary = {
@@ -117,7 +125,13 @@ export class DataScheduler {
         platform: 'predictfun',
         type: 'dutching',
       }
-      console.log(`[Scheduler] Predict.fun: ${binary.length} binary, ${dutching.length} dutching`)
+      this.cache.predictfun.topVolume = {
+        data: topVolume,
+        updatedAt: Date.now(),
+        platform: 'predictfun',
+        type: 'topVolume',
+      }
+      console.log(`[Scheduler] Predict.fun: ${binary.length} binary, ${dutching.length} dutching, ${topVolume.length} topVolume`)
     } catch (error) {
       console.error('[Scheduler] Failed to refresh Predict.fun:', error)
     } finally {
@@ -139,9 +153,10 @@ export class DataScheduler {
 
     console.log('[Scheduler] Refreshing Kalshi data...')
     try {
-      const [binary, dutching] = await Promise.all([
-        fetchKalshiBinaryMarkets(this.config.kalshiCredentials),
+      const [binary, dutching, topVolume] = await Promise.all([
+        fetchKalshiBinaryMarkets(this.config.kalshiCredentials),  // Binary only for arb scanner
         fetchKalshiDutchingEvents(this.config.kalshiCredentials),
+        fetchKalshiBinaryMarkets(this.config.kalshiCredentials, { includeAllMarkets: true }),  // All markets for volume ranking
       ])
 
       this.cache.kalshi.binary = {
@@ -156,7 +171,13 @@ export class DataScheduler {
         platform: 'kalshi',
         type: 'dutching',
       }
-      console.log(`[Scheduler] Kalshi: ${binary.length} binary, ${dutching.length} dutching`)
+      this.cache.kalshi.topVolume = {
+        data: topVolume,
+        updatedAt: Date.now(),
+        platform: 'kalshi',
+        type: 'topVolume',
+      }
+      console.log(`[Scheduler] Kalshi: ${binary.length} binary, ${dutching.length} dutching, ${topVolume.length} topVolume`)
     } catch (error) {
       console.error('[Scheduler] Failed to refresh Kalshi:', error)
     } finally {

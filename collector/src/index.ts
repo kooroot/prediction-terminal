@@ -161,10 +161,11 @@ const server = Bun.serve({
       // Top Volume endpoint: /api/top-volume/all (combined across all platforms)
       if (path === '/api/top-volume/all') {
         const cache = scheduler.getCache()
+        // Use topVolume cache which includes all markets (binary + multi-outcome)
         const allMarkets = [
-          ...(cache.polymarket.binary?.data ?? []),
-          ...(cache.predictfun.binary?.data ?? []),
-          ...(cache.kalshi.binary?.data ?? []),
+          ...(cache.polymarket.topVolume?.data ?? []),
+          ...(cache.predictfun.topVolume?.data ?? []),
+          ...(cache.kalshi.topVolume?.data ?? []),
         ]
 
         const sortedByVolume = allMarkets
@@ -190,7 +191,8 @@ const server = Bun.serve({
         }
 
         const cache = scheduler.getCache()
-        const platformCache = cache[platform]?.binary
+        // Use topVolume cache which includes all markets (binary + multi-outcome)
+        const platformCache = cache[platform]?.topVolume
 
         if (!platformCache) {
           return jsonResponse({ error: 'Data not yet available', platform }, 503)

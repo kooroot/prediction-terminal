@@ -3,7 +3,12 @@ import { createServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
 import type { MarketData, Platform } from '~/lib/types'
 
-const CACHE_SERVER_URL = process.env.CACHE_SERVER_URL || 'http://localhost:3001'
+// Hardcoded for Cloudflare Workers - process.env doesn't work reliably in TanStack Start server functions
+const CACHE_SERVER_URL = 'https://robin-researcher-barcelona-msgid.trycloudflare.com'
+
+function getCacheServerUrl(): string {
+  return CACHE_SERVER_URL
+}
 
 interface TopVolumeResponse {
   data: MarketData[]
@@ -15,7 +20,7 @@ interface TopVolumeResponse {
 
 const fetchTopVolumeAll = createServerFn({ method: 'GET' }).handler(async () => {
   try {
-    const response = await fetch(`${CACHE_SERVER_URL}/api/top-volume/all`)
+    const response = await fetch(`${getCacheServerUrl()}/api/top-volume/all`)
     if (!response.ok) return null
     return (await response.json()) as TopVolumeResponse
   } catch {
@@ -24,10 +29,10 @@ const fetchTopVolumeAll = createServerFn({ method: 'GET' }).handler(async () => 
 })
 
 const fetchTopVolumePlatform = createServerFn({ method: 'GET' })
-  .validator((platform: Platform) => platform)
+  .inputValidator((platform: Platform) => platform)
   .handler(async ({ data: platform }) => {
     try {
-      const response = await fetch(`${CACHE_SERVER_URL}/api/top-volume/${platform}`)
+      const response = await fetch(`${getCacheServerUrl()}/api/top-volume/${platform}`)
       if (!response.ok) return null
       return (await response.json()) as TopVolumeResponse
     } catch {
