@@ -20,8 +20,8 @@ const getCacheStatus = createServerFn({ method: 'GET' }).handler(async () => {
 export const Route = createFileRoute('/')({
   component: HomePage,
   loader: async () => {
-    // Return static data to debug - no fetch at all
-    return { status: null }
+    const status = await getCacheStatus()
+    return { status }
   },
 })
 
