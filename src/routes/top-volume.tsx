@@ -324,7 +324,7 @@ function getMarketUrl(market: MarketData): string {
     case 'polymarket':
       return `https://polymarket.com/event/${market.slug || market.id}`
     case 'predictfun':
-      return `https://predict.fun/category/${market.slug || market.id}`
+      return `https://predict.fun/market/${market.slug || market.id}`
     case 'kalshi':
       return `https://kalshi.com/markets/${market.id}`
     default:
