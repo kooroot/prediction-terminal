@@ -1,5 +1,5 @@
 import type { CacheStore, MarketData, DutchingEvent } from './types'
-import { fetchPolymarketBinaryMarkets, fetchPolymarketDutchingEvents } from './collectors/polymarket'
+import { fetchPolymarketBinaryMarkets, fetchPolymarketDutchingEvents, fetchPolymarketTopVolumeEvents } from './collectors/polymarket'
 import { fetchPredictfunBinaryMarkets, fetchPredictfunDutchingEvents } from './collectors/predictfun'
 import { fetchKalshiBinaryMarkets, fetchKalshiDutchingEvents } from './collectors/kalshi'
 import type { KalshiCredentials } from './auth/kalshi'
@@ -64,7 +64,7 @@ export class DataScheduler {
       const [binary, dutching, topVolume] = await Promise.all([
         fetchPolymarketBinaryMarkets(),  // Binary only for arb scanner
         fetchPolymarketDutchingEvents(),
-        fetchPolymarketBinaryMarkets({ includeAllMarkets: true }),  // All markets for volume ranking
+        fetchPolymarketTopVolumeEvents(),  // Event-level volume for ranking dashboard
       ])
 
       this.cache.polymarket.binary = {
